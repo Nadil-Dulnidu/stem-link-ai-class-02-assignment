@@ -7,6 +7,13 @@ them into a single, coherent summary highlighting agreements and conflicts.
 
 import os
 from typing import List, Dict
+from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+load_dotenv()
 
 
 class SynthesisOrchestrator:
@@ -32,29 +39,39 @@ class SynthesisOrchestrator:
         )
 
         # TODO: Build prompts and LLM(s)
-        self.extract_prompt = None
-        self.synth_prompt = None
-        self.llm = None
-        self.extract_chain = None
-        self.synth_chain = None
+        self.extract_prompt = ChatPromptTemplate.from_messages([
+            ("system", self.extractor_system),
+            ("user", self.extractor_user),
+        ])
+        self.synth_prompt = ChatPromptTemplate.from_messages([
+            ("system", self.synth_system),
+            ("user", self.synth_user),
+        ])
+        self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
+        self.extract_chain = self.extract_prompt | self.llm | StrOutputParser()
+        self.synth_chain = self.synth_prompt | self.llm | StrOutputParser()
 
     def extract_claims(self, notes: List[str]) -> List[str]:
         """Return a list of extracted claims lists (as strings), one per note.
 
         Implement using `.batch()` on the extractor chain.
         """
-        raise NotImplementedError("Implement batch claim extraction.")
+        chain = self.extract_prompt | self.llm | StrOutputParser()
+        inputs = [{"note": note} for note in notes]
+        return chain.batch(inputs)
 
     def synthesize(self, claims: List[str]) -> str:
         """Return a synthesis from already-extracted claims.
 
         Implement: invoke synthesizer chain with a joined claims string.
         """
-        raise NotImplementedError("Implement final synthesis step.")
+        chain = self.synth_prompt | self.llm | StrOutputParser()
+        return chain.invoke({"claims": "\n".join(claims)})
 
     def run(self, notes: List[str]) -> str:
         """End-to-end: extract claims (batch) then synthesize a final output."""
-        raise NotImplementedError("Wire extract→synthesize end-to-end.")
+        claims = self.extract_claims(notes)
+        return self.synthesize(claims)
 
 
 def _demo():

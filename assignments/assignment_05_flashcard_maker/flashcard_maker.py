@@ -5,10 +5,12 @@ Focus: Use `with_structured_output` to coerce JSON into a Pydantic model.
 """
 
 import os
+from dotenv import load_dotenv
 from typing import List
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 
+load_dotenv()
 
 class Flashcard(BaseModel):
     """TODO: Define fields for a clean flashcard."""
@@ -20,22 +22,18 @@ class Flashcard(BaseModel):
 class FlashcardMaker:
     def __init__(self):
         # TODO: Create an LLM and wrap with structured output to Flashcard
-        # self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
-        # self.structured = self.llm.with_structured_output(Flashcard)
-        self.llm = None
-        self.structured = None
+        self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+        self.structured = self.llm.with_structured_output(Flashcard)
 
     def make_cards(self, topics: List[str]) -> List[Flashcard]:
         """TODO: Generate one card per topic with concise definitions."""
-        # cards: List[Flashcard] = []
-        # for t in topics:
-        #     card = self.structured.invoke(
-        #         f"Create a beginner-friendly flashcard about '{t}'."
-        #     )
-        #     cards.append(card)
-        # return cards
-        raise NotImplementedError("Build structured LLM and generate flashcards.")
-
+        cards: List[Flashcard] = []
+        for t in topics:    
+            card = self.structured.invoke(
+                f"Create a beginner-friendly flashcard about '{t}'."
+            )
+            cards.append(card)
+        return cards
 
 def _demo():
     if not os.getenv("OPENAI_API_KEY"):

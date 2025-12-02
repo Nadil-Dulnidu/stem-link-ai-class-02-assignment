@@ -6,7 +6,13 @@ support for batch processing many transcripts at once.
 """
 
 import os
+from dotenv import load_dotenv
 from typing import List, Dict
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+load_dotenv()
 
 
 class MinutesBatcher:
@@ -30,18 +36,21 @@ class MinutesBatcher:
             "Return sections: MINUTES (3-5 bullets), ACTIONS (bullets with owner;date)."
         )
         # TODO: Build ChatPromptTemplate and store as self.prompt
-        self.prompt = None
+        self.prompt = ChatPromptTemplate.from_messages([
+            ("system", self.system_prompt),
+            ("user", self.user_prompt),
+        ])
         # TODO: Create a low-temperature ChatOpenAI and store as self.llm
-        self.llm = None
+        self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
         # TODO: Build a chain `self.chain` with StrOutputParser
-        self.chain = None
+        self.chain = self.prompt | self.llm | StrOutputParser()
 
     def summarize_one(self, title: str, transcript: str) -> str:
         """Return minutes+actions for a single transcript.
 
         Implement using the prepared chain and `{title, transcript}` inputs.
         """
-        raise NotImplementedError("Wire the chain and invoke for a single transcript.")
+        return self.chain.invoke({"title": title, "transcript": transcript})
 
     def summarize_batch(self, items: List[Dict[str, str]]) -> List[str]:
         """Return minutes+actions for a batch of transcripts.
@@ -49,7 +58,15 @@ class MinutesBatcher:
         Implement: use `.batch()` on the chain with a list of input dicts.
         Preserve order of inputs in the returned results.
         """
-        raise NotImplementedError("Use chain.batch for parallel processing.")
+
+        batch_inputs = [
+            {
+                "title": item["title"],
+                "transcript": item["transcript"],
+            }
+            for item in items
+        ]
+        return self.chain.batch(batch_inputs)
 
 
 def _demo():
@@ -64,6 +81,24 @@ def _demo():
                 "Discussed backlog grooming, two blockers, and deployment window next Tuesday.",
             )
         )
+
+        print("\n📝 Minutes & Actions — bulk demo\n" + "-" * 40)
+
+        batch_list = mb.summarize_batch(
+                [
+                    {
+                        "title": "Sprint Planning",
+                        "transcript": "Discussed backlog grooming, two blockers, and deployment window next Tuesday.",
+                    },
+                    {
+                        "title": "Sprint Planning",
+                        "transcript": "Discussed backlog grooming, two blockers, and deployment window next Tuesday.",
+                    },
+                ]
+            )
+        for item in batch_list:
+            print(item)
+
     except NotImplementedError as e:
         print(e)
 

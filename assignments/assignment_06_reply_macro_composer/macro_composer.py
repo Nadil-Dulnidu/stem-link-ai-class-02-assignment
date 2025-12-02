@@ -8,8 +8,13 @@ Use runtime configs (`.bind`, `.with_config`) to adjust tone and length.
 """
 
 import os
+from dotenv import load_dotenv
 from typing import List, Dict
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
+load_dotenv()
 
 class MacroComposer:
     """Compose reply macros with configurable tone and length.
@@ -31,11 +36,13 @@ class MacroComposer:
             "Return a ready-to-send macro with greeting and sign-off."
         )
         # TODO: Create ChatPromptTemplate using the above strings and store as self.prompt
-        # self.prompt = ChatPromptTemplate.from_messages([...])
-        self.prompt = None
+        self.prompt = ChatPromptTemplate.from_messages([
+            ("system", self.system_prompt),
+            ("user", self.user_prompt),
+        ])
 
         # TODO: Create a base ChatOpenAI LLM (low temperature). Store as self.llm
-        self.llm = None
+        self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
 
     def compose_macro(
         self, message: str, context: str, style_hint: str = "neutral"
@@ -48,9 +55,8 @@ class MacroComposer:
         - Invoke with `{"message": message, "context": context, "style_hint": style_hint}`.
         - Return the string content.
         """
-        raise NotImplementedError(
-            "Wire prompt→llm→parser chain with runtime config and invoke."
-        )
+        chain = self.prompt | self.llm | StrOutputParser()
+        return chain.invoke({"message": message, "context": context, "style_hint": style_hint})
 
     def compose_bulk(
         self, items: List[Dict[str, str]], style_hint: str = "neutral"
@@ -62,7 +68,16 @@ class MacroComposer:
         - Each item has keys: message, context.
         - Return list of strings in same order.
         """
-        raise NotImplementedError("Build a chain and use .batch for efficiency.")
+        chain = self.prompt | self.llm | StrOutputParser()
+        batch_inputs = [
+        {
+            "message": item["message"],
+            "context": item["context"],
+            "style_hint": style_hint,
+        }
+        for item in items
+    ]
+        return chain.batch(batch_inputs)
 
 
 def _demo():
@@ -78,6 +93,24 @@ def _demo():
                 style_hint="warm",
             )
         )
+        print("\n✉️ Macro Composer — bulk demo\n" + "-" * 40)
+    
+        item_list = mc.compose_bulk(
+                [
+                    {
+                        "message": "My package arrived damaged. What can I do?",
+                        "context": "Order #123, policy: refund or replacement within 30 days.",
+                    },
+                    {
+                        "message": "My package arrived damaged. What can I do?",
+                        "context": "Order #123, policy: refund or replacement within 30 days.",
+                    },
+                ],
+                style_hint="warm",
+            )
+        for item in item_list:
+            print(item)
+            
     except NotImplementedError as e:
         print(e)
 
