@@ -12,6 +12,7 @@ Instructions: Fill the TODOs only. Do not change class/method signatures.
 import os
 from dataclasses import dataclass
 from typing import Optional
+from getpass import getpass
 
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -31,15 +32,15 @@ class EmergencyDispatcher:
     def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.2):
         # TODO: Initialize an LLM for stable, reproducible outputs
         # self.llm = ChatOpenAI(model=model, temperature=temperature)
-        self.llm = None
+        self.llm = ChatOpenAI(model=model, temperature=temperature)
 
         # TODO: Build the ChatPromptTemplate from prompt strings in `_build_prompt`
         # self.prompt = self._build_prompt()
-        self.prompt = None
+        self.prompt = self._build_prompt()
 
         # TODO: Create a chain that maps {transcript} -> "URGENCY | SUMMARY | ACTION"
         # self.chain = self.prompt | self.llm | StrOutputParser()
-        self.chain = None
+        self.chain = self.prompt | self.llm | StrOutputParser()
 
     def _build_prompt(self) -> Optional[ChatPromptTemplate]:
         """
@@ -67,7 +68,10 @@ class EmergencyDispatcher:
         #     ("system", system_prompt),
         #     ("user", user_prompt),
         # ])
-        return None
+        return ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("user", user_prompt),
+        ])  
 
     def triage_call(self, transcript: str) -> DispatchResult:
         """
@@ -80,7 +84,13 @@ class EmergencyDispatcher:
         """
         # TODO: invoke the chain with {"transcript": transcript}
         # and parse the result into DispatchResult
-        raise NotImplementedError("Build chain, invoke, and parse triage output.")
+        result = self.chain.invoke({"transcript": transcript})
+        return DispatchResult(
+            urgency=result.split("|")[0].strip(),
+            summary=result.split("|")[1].strip(),
+            action=result.split("|")[2].strip(),
+        )
+        
 
 
 def _demo_cases() -> None:
@@ -104,6 +114,8 @@ def _demo_cases() -> None:
 
 
 if __name__ == "__main__":
+    os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY") or getpass(
+    "Enter OpenAI API Key: ")
     if not os.getenv("OPENAI_API_KEY"):
         print("⚠️ Set OPENAI_API_KEY before running.")
     _demo_cases()
