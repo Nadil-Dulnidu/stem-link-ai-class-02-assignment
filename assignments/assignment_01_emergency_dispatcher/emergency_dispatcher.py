@@ -10,6 +10,7 @@ Instructions: Fill the TODOs only. Do not change class/method signatures.
 """
 
 import os
+from dotenv import load_dotenv
 from dataclasses import dataclass
 from typing import Optional
 from getpass import getpass
@@ -17,6 +18,8 @@ from getpass import getpass
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+
+load_dotenv()
 
 
 @dataclass
@@ -114,8 +117,6 @@ def _demo_cases() -> None:
 
 
 if __name__ == "__main__":
-    os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY") or getpass(
-    "Enter OpenAI API Key: ")
     if not os.getenv("OPENAI_API_KEY"):
         print("⚠️ Set OPENAI_API_KEY before running.")
     _demo_cases()

@@ -8,12 +8,15 @@ using only clear instructions — no training examples needed!
 
 import os
 import json
+from dotenv import load_dotenv
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 from enum import Enum
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+
+load_dotenv()
 
 
 class ViolationCategory(Enum):
